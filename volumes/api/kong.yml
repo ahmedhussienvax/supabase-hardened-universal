@@ -15,6 +15,7 @@ services:
       - name: rest-route
         paths:
           - /rest/v1
+          - /api/projects/default/rest/v1
         strip_path: true
 
   - name: storage

@@ -15,6 +15,7 @@ services:
           mkdir -p /target &&
           rm -rf /target/db/init.sh &&
           cp -rf /tmp/repo/volumes/* /target/ &&
+          cp -f /tmp/repo/entrypoint.sh /target/ &&
           echo '✅ Sync Completed Successfully!'
         else
           echo '❌ Sync Failed' && exit 1
@@ -28,7 +29,29 @@ services:
     restart: 'no'
     volumes:
       - './volumes/functions:/volumes/functions'
-    command: "sh -c \"\n       # Clean up if Docker accidentally created directories instead of files\n       [ -d /volumes/functions/main/index.ts ] && rm -rf /volumes/functions/main/index.ts;\n       [ -d /volumes/functions/hello/index.ts ] && rm -rf /volumes/functions/hello/index.ts;\n       \n       mkdir -p /volumes/functions/main /volumes/functions/hello &&\n       if [ ! -f /volumes/functions/main/index.ts ] || [ ! -s /volumes/functions/main/index.ts ]; then\n         echo 'import { serve } from \\\"https://deno.land/std@0.131.0/http/server.ts\\\"; serve((req) => new Response(\\\"Main Function Active\\\"));' > /volumes/functions/main/index.ts;\n       fi &&\n       if [ ! -f /volumes/functions/hello/index.ts ] || [ ! -s /volumes/functions/hello/index.ts ]; then\n         echo 'import { serve } from \\\"https://deno.land/std@0.131.0/http/server.ts\\\"; serve((req) => new Response(\\\"Hello World\\\"));' > /volumes/functions/hello/index.ts;\n       fi\"\n"
+    command: "sh -c \"
+
+      \       # Clean up if Docker accidentally created directories instead of files
+
+      \       [ -d /volumes/functions/main/index.ts ] && rm -rf /volumes/functions/main/index.ts;
+
+      \       [ -d /volumes/functions/hello/index.ts ] && rm -rf /volumes/functions/hello/index.ts;
+
+      \      \ 
+
+      \       mkdir -p /volumes/functions/main /volumes/functions/hello &&
+
+      \       if [ ! -f /volumes/functions/main/index.ts ] || [ ! -s /volumes/functions/main/index.ts ]; then
+
+      \         echo 'import { serve } from \\\"https://deno.land/std@0.131.0/http/server.ts\\\"; serve((req) => new Response(\\\"Main Function Active\\\"));' > /volumes/functions/main/index.ts;
+
+      \       fi &&
+
+      \       if [ ! -f /volumes/functions/hello/index.ts ] || [ ! -s /volumes/functions/hello/index.ts ]; then
+
+      \         echo 'import { serve } from \\\"https://deno.land/std@0.131.0/http/server.ts\\\"; serve((req) => new Response(\\\"Hello World\\\"));' > /volumes/functions/hello/index.ts;
+
+      \       fi\"\n"
     networks:
       - coolify
   supabase-kong:
@@ -62,14 +85,14 @@ services:
     networks:
       coolify:
         aliases:
-          - supabase.150.136.71.17.sslip.io
-          - dashboard.150.136.71.17.sslip.io
+          - "supabase.${PROJECT_DOMAIN:-localhost}"
+          - "dashboard.${PROJECT_DOMAIN:-localhost}"
     extra_hosts:
-      - "supabase.150.136.71.17.sslip.io:host-gateway"
-      - "dashboard.150.136.71.17.sslip.io:host-gateway"
+      - "supabase.${PROJECT_DOMAIN:-localhost}:host-gateway"
+      - "dashboard.${PROJECT_DOMAIN:-localhost}:host-gateway"
     labels:
       - traefik.enable=true
-      - 'traefik.http.routers.supabase-kong.rule=Host(`${SERVICE_FQDN_SUPABASEKONG:-supabase.150.136.71.17.sslip.io}`)'
+      - 'traefik.http.routers.supabase-kong.rule=Host(`${SERVICE_FQDN_SUPABASEKONG:-supabase.${PROJECT_DOMAIN:-localhost}}`)'
       - traefik.http.routers.supabase-kong.entrypoints=https
       - traefik.http.routers.supabase-kong.tls.certresolver=letsencrypt
       - traefik.http.services.supabase-kong.loadbalancer.server.port=8000
@@ -78,8 +101,7 @@ services:
         soft: 100000
         hard: 100000
     volumes:
-      -
-        type: bind
+      - type: bind
         source: ./volumes/api/kong.yml
         target: /home/kong/temp.yml
   supabase-studio:
@@ -107,7 +129,7 @@ services:
         condition: service_started
     labels:
       - traefik.enable=true
-      - 'traefik.http.routers.supabase-studio.rule=Host(`${SERVICE_FQDN_SUPABASESTUDIO:-supabase-studio.150.136.71.17.sslip.io}`)'
+      - 'traefik.http.routers.supabase-studio.rule=Host(`${SERVICE_FQDN_SUPABASESTUDIO:-supabase-studio.${PROJECT_DOMAIN:-localhost}}`)'
       - traefik.http.routers.supabase-studio.entrypoints=https
       - traefik.http.routers.supabase-studio.tls.certresolver=letsencrypt
       - traefik.http.services.supabase-studio.loadbalancer.server.port=3000
@@ -147,7 +169,7 @@ services:
     networks:
       - coolify
     extra_hosts:
-      - "supabase.150.136.71.17.sslip.io:host-gateway"
+      - "supabase.${PROJECT_DOMAIN:-localhost}:host-gateway"
   supabase-db:
     image: 'supabase/postgres:15.8.1.048'
     restart: unless-stopped
@@ -192,32 +214,25 @@ services:
         hard: 100000
     volumes:
       - 'supabase-db-data:/var/lib/postgresql/data'
-      -
-        type: bind
+      - type: bind
         source: ./volumes/db/realtime.sql
         target: /docker-entrypoint-initdb.d/99-realtime.sql
-      -
-        type: bind
+      - type: bind
         source: ./volumes/db/_supabase.sql
         target: /docker-entrypoint-initdb.d/00-_supabase.sql
-      -
-        type: bind
+      - type: bind
         source: ./volumes/db/pooler.sql
         target: /docker-entrypoint-initdb.d/99-pooler.sql
-      -
-        type: bind
+      - type: bind
         source: ./volumes/db/webhooks.sql
         target: /docker-entrypoint-initdb.d/98-webhooks.sql
-      -
-        type: bind
+      - type: bind
         source: ./volumes/db/init.sh
         target: /docker-entrypoint-initdb.d/init.sh
-      -
-        type: bind
+      - type: bind
         source: ./volumes/db/jwt.sql
         target: /docker-entrypoint-initdb.d/99-jwt.sql
-      -
-        type: bind
+      - type: bind
         source: ./volumes/db/logs.sql
         target: /docker-entrypoint-initdb.d/99-logs.sql
       - 'supabase-db-config:/etc/postgresql-custom'
@@ -294,8 +309,7 @@ services:
     environment:
       - 'LOGFLARE_API_KEY=${SERVICE_PASSWORD_LOGFLARE}'
     configs:
-      -
-        source: vector_config
+      - source: vector_config
         target: /etc/vector/vector.yml
     command:
       - '--config'
@@ -476,8 +490,7 @@ services:
     entrypoint:
       - /entrypoint.sh
     volumes:
-      -
-        type: bind
+      - type: bind
         source: ./entrypoint.sh
         target: /entrypoint.sh
   supabase-storage:
@@ -611,12 +624,10 @@ services:
       - 'VERIFY_JWT=${FUNCTIONS_VERIFY_JWT:-false}'
     volumes:
       - './volumes/functions:/home/deno/functions'
-      -
-        type: bind
+      - type: bind
         source: ./volumes/functions/main/index.ts
         target: /home/deno/functions/main/index.ts
-      -
-        type: bind
+      - type: bind
         source: ./volumes/functions/hello/index.ts
         target: /home/deno/functions/hello/index.ts
     command:
@@ -672,8 +683,7 @@ services:
       - '-c'
       - '/app/bin/migrate && /app/bin/supavisor eval "$$(cat /etc/pooler/pooler.exs)" && /app/bin/server'
     volumes:
-      -
-        type: bind
+      - type: bind
         source: ./volumes/pooler/pooler.exs
         target: /etc/pooler/pooler.exs
     networks:
@@ -686,4 +696,533 @@ volumes:
   supabase-db-config: null
 configs:
   vector_config:
-    content: "api:\n  enabled: true\n  address: 0.0.0.0:9001\n\nsources:\n  docker_host:\n    type: docker_logs\n    exclude_containers:\n      - supabase-vector\n\ntransforms:\n  project_logs:\n    type: remap\n    inputs:\n      - docker_host\n    source: |-\n      .project = \"default\"\n      .event_message = del(.message)\n      .appname = del(.container_name)\n      del(.container_created_at)\n      del(.container_id)\n      del(.source_type)\n      del(.stream)\n      del(.label)\n      del(.image)\n      del(.host)\n      del(.stream)\n  router:\n    type: route\n    inputs:\n      - project_logs\n    route:\n      kong: '.appname == \"supabase-kong\"'\n      auth: '.appname == \"supabase-auth\"'\n      rest: '.appname == \"supabase-rest\"'\n      realtime: '.appname == \"realtime-dev.supabase-realtime\"'\n      storage: '.appname == \"supabase-storage\"'\n      functions: '.appname == \"supabase-edge-functions\"'\n      db: '.appname == \"supabase-db\"'\n  # Ignores non nginx errors since they are related with kong booting up\n  kong_logs:\n    type: remap\n    inputs:\n      - router.kong\n    source: |-\n      req, err = parse_nginx_log(.event_message, \"combined\")\n      if err == null {\n          .timestamp = req.timestamp\n          .metadata.request.headers.referer = req.referer\n          .metadata.request.headers.user_agent = req.agent\n          .metadata.request.headers.cf_connecting_ip = req.client\n          .metadata.response.status_code = req.status\n          url, split_err = split(req.request, \" \")\n          if split_err == null {\n              .metadata.request.method = url[0]\n              .metadata.request.path = url[1]\n              .metadata.request.protocol = url[2]\n          }\n      }\n      if err != null {\n        abort\n      }\n  # Ignores non nginx errors since they are related with kong booting up\n  kong_err:\n    type: remap\n    inputs:\n      - router.kong\n    source: |-\n      .metadata.request.method = \"GET\"\n      .metadata.response.status_code = 200\n      parsed, err = parse_nginx_log(.event_message, \"error\")\n      if err == null {\n          .timestamp = parsed.timestamp\n          .severity = parsed.severity\n          .metadata.request.host = parsed.host\n          .metadata.request.headers.cf_connecting_ip = parsed.client\n          url, err = split(parsed.request, \" \")\n          if err == null {\n              .metadata.request.method = url[0]\n              .metadata.request.path = url[1]\n              .metadata.request.protocol = url[2]\n          }\n      }\n      if err != null {\n        abort\n      }\n  # Gotrue logs are structured json strings which frontend parses directly. But we keep metadata for consistency.\n  auth_logs:\n    type: remap\n    inputs:\n      - router.auth\n    source: |-\n      parsed, err = parse_json(.event_message)\n      if err == null {\n          .metadata.timestamp = parsed.time\n          .metadata = merge!(.metadata, parsed)\n      }\n  # PostgREST logs are structured so we separate timestamp from message using regex\n  rest_logs:\n    type: remap\n    inputs:\n      - router.rest\n    source: |-\n      parsed, err = parse_regex(.event_message, r'^(?P<time>.*): (?P<msg>.*)$')\n      if err == null {\n          .event_message = parsed.msg\n          .timestamp = parse_timestamp!(value: parsed.time,format: \"%d/%b/%Y:%H:%M:%S %z\")\n          .metadata.host = .project\n      }\n  # Filter out healthcheck logs from Realtime\n  realtime_logs_filtered:\n    type: filter\n    inputs:\n      - router.realtime\n    condition: '!contains(string!(.event_message), \"/health\")'\n  # Realtime logs are structured so we parse the severity level using regex (ignore time because it has no date)\n  realtime_logs:\n    type: remap\n    inputs:\n      - realtime_logs_filtered\n    source: |-\n      .metadata.project = del(.project)\n      .metadata.external_id = .metadata.project\n      parsed, err = parse_regex(.event_message, r'^(?P<time>\\d+:\\d+:\\d+\\.\\d+) \\[(?P<level>\\w+)\\] (?P<msg>.*)$')\n      if err == null {\n          .event_message = parsed.msg\n          .metadata.level = parsed.level\n      }\n  # Function logs are unstructured messages on stderr\n  functions_logs:\n    type: remap\n    inputs:\n      - router.functions\n    source: |-\n      .metadata.project_ref = del(.project)\n  # Storage logs may contain json objects so we parse them for completeness\n  storage_logs:\n    type: remap\n    inputs:\n      - router.storage\n    source: |-\n      .metadata.project = del(.project)\n      .metadata.tenantId = .metadata.project\n      parsed, err = parse_json(.event_message)\n      if err == null {\n          .event_message = parsed.msg\n          .metadata.level = parsed.level\n          .metadata.timestamp = parsed.time\n          .metadata.context[0].host = parsed.hostname\n          .metadata.context[0].pid = parsed.pid\n      }\n  # Postgres logs some messages to stderr which we map to warning severity level\n  db_logs:\n    type: remap\n    inputs:\n      - router.db\n    source: |-\n      .metadata.host = \"db-default\"\n      .metadata.parsed.timestamp = .timestamp\n\n      parsed, err = parse_regex(.event_message, r'.*(?P<level>INFO|NOTICE|WARNING|ERROR|LOG|FATAL|PANIC?):.*', numeric_groups: true)\n\n      if err != null || parsed == null {\n        .metadata.parsed.error_severity = \"info\"\n      }\n      if parsed.level != null {\n       .metadata.parsed.error_severity = parsed.level\n      }\n      if .metadata.parsed.error_severity == \"info\" {\n          .metadata.parsed.error_severity = \"log\"\n      }\n      .metadata.parsed.error_severity = upcase!(.metadata.parsed.error_severity)\n\nsinks:\n  logflare_auth:\n    type: 'http'\n    inputs:\n      - auth_logs\n    encoding:\n      codec: 'json'\n    method: 'post'\n    request:\n      retry_max_duration_secs: 30\n      retry_initial_backoff_secs: 1\n      headers:\n        x-api-key: ${SERVICE_PASSWORD_LOGFLARE}\n    uri: 'http://supabase-analytics:4000/api/logs?source_name=gotrue.logs.prod'\n  logflare_realtime:\n    type: 'http'\n    inputs:\n      - realtime_logs\n    encoding:\n      codec: 'json'\n    method: 'post'\n    request:\n      retry_max_duration_secs: 30\n      retry_initial_backoff_secs: 1\n      headers:\n        x-api-key: ${SERVICE_PASSWORD_LOGFLARE}\n    uri: 'http://supabase-analytics:4000/api/logs?source_name=realtime.logs.prod'\n  logflare_rest:\n    type: 'http'\n    inputs:\n      - rest_logs\n    encoding:\n      codec: 'json'\n    method: 'post'\n    request:\n      retry_max_duration_secs: 30\n      retry_initial_backoff_secs: 1\n      headers:\n        x-api-key: ${SERVICE_PASSWORD_LOGFLARE}\n    uri: 'http://supabase-analytics:4000/api/logs?source_name=postgREST.logs.prod'\n  logflare_db:\n    type: 'http'\n    inputs:\n      - db_logs\n    encoding:\n      codec: 'json'\n    method: 'post'\n    request:\n      retry_max_duration_secs: 30\n      retry_initial_backoff_secs: 1\n      headers:\n        x-api-key: ${SERVICE_PASSWORD_LOGFLARE}\n    # Route directly to analytics like other sinks. Retry handles the startup\n    # race where analytics may not be ready yet when early DB logs arrive.\n    uri: 'http://supabase-analytics:4000/api/logs?source_name=postgres.logs'\n  logflare_functions:\n    type: 'http'\n    inputs:\n      - functions_logs\n    encoding:\n      codec: 'json'\n    method: 'post'\n    request:\n      retry_max_duration_secs: 30\n      retry_initial_backoff_secs: 1\n      headers:\n        x-api-key: ${SERVICE_PASSWORD_LOGFLARE}\n    uri: 'http://supabase-analytics:4000/api/logs?source_name=deno-relay-logs'\n  logflare_storage:\n    type: 'http'\n    inputs:\n      - storage_logs\n    encoding:\n      codec: 'json'\n    method: 'post'\n    request:\n      retry_max_duration_secs: 30\n      retry_initial_backoff_secs: 1\n      headers:\n        x-api-key: ${SERVICE_PASSWORD_LOGFLARE}\n    uri: 'http://supabase-analytics:4000/api/logs?source_name=storage.logs.prod.2'\n  logflare_kong:\n    type: 'http'\n    inputs:\n      - kong_logs\n      - kong_err\n    encoding:\n      codec: 'json'\n    method: 'post'\n    request:\n      retry_max_duration_secs: 30\n      retry_initial_backoff_secs: 1\n      headers:\n        x-api-key: ${SERVICE_PASSWORD_LOGFLARE}\n    uri: 'http://supabase-analytics:4000/api/logs?source_name=cloudflare.logs.prod'\n"
+    content: "api:
+
+      \  enabled: true
+
+      \  address: 0.0.0.0:9001
+
+
+      sources:
+
+      \  docker_host:
+
+      \    type: docker_logs
+
+      \    exclude_containers:
+
+      \      - supabase-vector
+
+
+      transforms:
+
+      \  project_logs:
+
+      \    type: remap
+
+      \    inputs:
+
+      \      - docker_host
+
+      \    source: |-
+
+      \      .project = \"default\"
+
+      \      .event_message = del(.message)
+
+      \      .appname = del(.container_name)
+
+      \      del(.container_created_at)
+
+      \      del(.container_id)
+
+      \      del(.source_type)
+
+      \      del(.stream)
+
+      \      del(.label)
+
+      \      del(.image)
+
+      \      del(.host)
+
+      \      del(.stream)
+
+      \  router:
+
+      \    type: route
+
+      \    inputs:
+
+      \      - project_logs
+
+      \    route:
+
+      \      kong: '.appname == \"supabase-kong\"'
+
+      \      auth: '.appname == \"supabase-auth\"'
+
+      \      rest: '.appname == \"supabase-rest\"'
+
+      \      realtime: '.appname == \"realtime-dev.supabase-realtime\"'
+
+      \      storage: '.appname == \"supabase-storage\"'
+
+      \      functions: '.appname == \"supabase-edge-functions\"'
+
+      \      db: '.appname == \"supabase-db\"'
+
+      \  # Ignores non nginx errors since they are related with kong booting up
+
+      \  kong_logs:
+
+      \    type: remap
+
+      \    inputs:
+
+      \      - router.kong
+
+      \    source: |-
+
+      \      req, err = parse_nginx_log(.event_message, \"combined\")
+
+      \      if err == null {
+
+      \          .timestamp = req.timestamp
+
+      \          .metadata.request.headers.referer = req.referer
+
+      \          .metadata.request.headers.user_agent = req.agent
+
+      \          .metadata.request.headers.cf_connecting_ip = req.client
+
+      \          .metadata.response.status_code = req.status
+
+      \          url, split_err = split(req.request, \" \")
+
+      \          if split_err == null {
+
+      \              .metadata.request.method = url[0]
+
+      \              .metadata.request.path = url[1]
+
+      \              .metadata.request.protocol = url[2]
+
+      \          }
+
+      \      }
+
+      \      if err != null {
+
+      \        abort
+
+      \      }
+
+      \  # Ignores non nginx errors since they are related with kong booting up
+
+      \  kong_err:
+
+      \    type: remap
+
+      \    inputs:
+
+      \      - router.kong
+
+      \    source: |-
+
+      \      .metadata.request.method = \"GET\"
+
+      \      .metadata.response.status_code = 200
+
+      \      parsed, err = parse_nginx_log(.event_message, \"error\")
+
+      \      if err == null {
+
+      \          .timestamp = parsed.timestamp
+
+      \          .severity = parsed.severity
+
+      \          .metadata.request.host = parsed.host
+
+      \          .metadata.request.headers.cf_connecting_ip = parsed.client
+
+      \          url, err = split(parsed.request, \" \")
+
+      \          if err == null {
+
+      \              .metadata.request.method = url[0]
+
+      \              .metadata.request.path = url[1]
+
+      \              .metadata.request.protocol = url[2]
+
+      \          }
+
+      \      }
+
+      \      if err != null {
+
+      \        abort
+
+      \      }
+
+      \  # Gotrue logs are structured json strings which frontend parses directly. But we keep metadata for consistency.
+
+      \  auth_logs:
+
+      \    type: remap
+
+      \    inputs:
+
+      \      - router.auth
+
+      \    source: |-
+
+      \      parsed, err = parse_json(.event_message)
+
+      \      if err == null {
+
+      \          .metadata.timestamp = parsed.time
+
+      \          .metadata = merge!(.metadata, parsed)
+
+      \      }
+
+      \  # PostgREST logs are structured so we separate timestamp from message using regex
+
+      \  rest_logs:
+
+      \    type: remap
+
+      \    inputs:
+
+      \      - router.rest
+
+      \    source: |-
+
+      \      parsed, err = parse_regex(.event_message, r'^(?P<time>.*): (?P<msg>.*)$')
+
+      \      if err == null {
+
+      \          .event_message = parsed.msg
+
+      \          .timestamp = parse_timestamp!(value: parsed.time,format: \"%d/%b/%Y:%H:%M:%S %z\")
+
+      \          .metadata.host = .project
+
+      \      }
+
+      \  # Filter out healthcheck logs from Realtime
+
+      \  realtime_logs_filtered:
+
+      \    type: filter
+
+      \    inputs:
+
+      \      - router.realtime
+
+      \    condition: '!contains(string!(.event_message), \"/health\")'
+
+      \  # Realtime logs are structured so we parse the severity level using regex (ignore time because it has no date)
+
+      \  realtime_logs:
+
+      \    type: remap
+
+      \    inputs:
+
+      \      - realtime_logs_filtered
+
+      \    source: |-
+
+      \      .metadata.project = del(.project)
+
+      \      .metadata.external_id = .metadata.project
+
+      \      parsed, err = parse_regex(.event_message, r'^(?P<time>\\d+:\\d+:\\d+\\.\\d+) \\[(?P<level>\\w+)\\] (?P<msg>.*)$')
+
+      \      if err == null {
+
+      \          .event_message = parsed.msg
+
+      \          .metadata.level = parsed.level
+
+      \      }
+
+      \  # Function logs are unstructured messages on stderr
+
+      \  functions_logs:
+
+      \    type: remap
+
+      \    inputs:
+
+      \      - router.functions
+
+      \    source: |-
+
+      \      .metadata.project_ref = del(.project)
+
+      \  # Storage logs may contain json objects so we parse them for completeness
+
+      \  storage_logs:
+
+      \    type: remap
+
+      \    inputs:
+
+      \      - router.storage
+
+      \    source: |-
+
+      \      .metadata.project = del(.project)
+
+      \      .metadata.tenantId = .metadata.project
+
+      \      parsed, err = parse_json(.event_message)
+
+      \      if err == null {
+
+      \          .event_message = parsed.msg
+
+      \          .metadata.level = parsed.level
+
+      \          .metadata.timestamp = parsed.time
+
+      \          .metadata.context[0].host = parsed.hostname
+
+      \          .metadata.context[0].pid = parsed.pid
+
+      \      }
+
+      \  # Postgres logs some messages to stderr which we map to warning severity level
+
+      \  db_logs:
+
+      \    type: remap
+
+      \    inputs:
+
+      \      - router.db
+
+      \    source: |-
+
+      \      .metadata.host = \"db-default\"
+
+      \      .metadata.parsed.timestamp = .timestamp
+
+
+      \      parsed, err = parse_regex(.event_message, r'.*(?P<level>INFO|NOTICE|WARNING|ERROR|LOG|FATAL|PANIC?):.*', numeric_groups: true)
+
+
+      \      if err != null || parsed == null {
+
+      \        .metadata.parsed.error_severity = \"info\"
+
+      \      }
+
+      \      if parsed.level != null {
+
+      \       .metadata.parsed.error_severity = parsed.level
+
+      \      }
+
+      \      if .metadata.parsed.error_severity == \"info\" {
+
+      \          .metadata.parsed.error_severity = \"log\"
+
+      \      }
+
+      \      .metadata.parsed.error_severity = upcase!(.metadata.parsed.error_severity)
+
+
+      sinks:
+
+      \  logflare_auth:
+
+      \    type: 'http'
+
+      \    inputs:
+
+      \      - auth_logs
+
+      \    encoding:
+
+      \      codec: 'json'
+
+      \    method: 'post'
+
+      \    request:
+
+      \      retry_max_duration_secs: 30
+
+      \      retry_initial_backoff_secs: 1
+
+      \      headers:
+
+      \        x-api-key: ${SERVICE_PASSWORD_LOGFLARE}
+
+      \    uri: 'http://supabase-analytics:4000/api/logs?source_name=gotrue.logs.prod'
+
+      \  logflare_realtime:
+
+      \    type: 'http'
+
+      \    inputs:
+
+      \      - realtime_logs
+
+      \    encoding:
+
+      \      codec: 'json'
+
+      \    method: 'post'
+
+      \    request:
+
+      \      retry_max_duration_secs: 30
+
+      \      retry_initial_backoff_secs: 1
+
+      \      headers:
+
+      \        x-api-key: ${SERVICE_PASSWORD_LOGFLARE}
+
+      \    uri: 'http://supabase-analytics:4000/api/logs?source_name=realtime.logs.prod'
+
+      \  logflare_rest:
+
+      \    type: 'http'
+
+      \    inputs:
+
+      \      - rest_logs
+
+      \    encoding:
+
+      \      codec: 'json'
+
+      \    method: 'post'
+
+      \    request:
+
+      \      retry_max_duration_secs: 30
+
+      \      retry_initial_backoff_secs: 1
+
+      \      headers:
+
+      \        x-api-key: ${SERVICE_PASSWORD_LOGFLARE}
+
+      \    uri: 'http://supabase-analytics:4000/api/logs?source_name=postgREST.logs.prod'
+
+      \  logflare_db:
+
+      \    type: 'http'
+
+      \    inputs:
+
+      \      - db_logs
+
+      \    encoding:
+
+      \      codec: 'json'
+
+      \    method: 'post'
+
+      \    request:
+
+      \      retry_max_duration_secs: 30
+
+      \      retry_initial_backoff_secs: 1
+
+      \      headers:
+
+      \        x-api-key: ${SERVICE_PASSWORD_LOGFLARE}
+
+      \    # Route directly to analytics like other sinks. Retry handles the startup
+
+      \    # race where analytics may not be ready yet when early DB logs arrive.
+
+      \    uri: 'http://supabase-analytics:4000/api/logs?source_name=postgres.logs'
+
+      \  logflare_functions:
+
+      \    type: 'http'
+
+      \    inputs:
+
+      \      - functions_logs
+
+      \    encoding:
+
+      \      codec: 'json'
+
+      \    method: 'post'
+
+      \    request:
+
+      \      retry_max_duration_secs: 30
+
+      \      retry_initial_backoff_secs: 1
+
+      \      headers:
+
+      \        x-api-key: ${SERVICE_PASSWORD_LOGFLARE}
+
+      \    uri: 'http://supabase-analytics:4000/api/logs?source_name=deno-relay-logs'
+
+      \  logflare_storage:
+
+      \    type: 'http'
+
+      \    inputs:
+
+      \      - storage_logs
+
+      \    encoding:
+
+      \      codec: 'json'
+
+      \    method: 'post'
+
+      \    request:
+
+      \      retry_max_duration_secs: 30
+
+      \      retry_initial_backoff_secs: 1
+
+      \      headers:
+
+      \        x-api-key: ${SERVICE_PASSWORD_LOGFLARE}
+
+      \    uri: 'http://supabase-analytics:4000/api/logs?source_name=storage.logs.prod.2'
+
+      \  logflare_kong:
+
+      \    type: 'http'
+
+      \    inputs:
+
+      \      - kong_logs
+
+      \      - kong_err
+
+      \    encoding:
+
+      \      codec: 'json'
+
+      \    method: 'post'
+
+      \    request:
+
+      \      retry_max_duration_secs: 30
+
+      \      retry_initial_backoff_secs: 1
+
+      \      headers:
+
+      \        x-api-key: ${SERVICE_PASSWORD_LOGFLARE}
+
+      \    uri: 'http://supabase-analytics:4000/api/logs?source_name=cloudflare.logs.prod'\n"
