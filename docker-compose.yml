@@ -13,7 +13,7 @@ services:
         if git clone --depth 1 https://github.com/ahmedhussienvax/supabase-hardened-universal.git /tmp/repo; then
           echo '✅ Clone Successful' &&
           mkdir -p /target &&
-          cp -rv /tmp/repo/volumes/* /target/ &&
+          cp -rf /tmp/repo/volumes/* /target/ &&
           echo '✅ Sync Completed Successfully!'
         else
           echo '❌ Sync Failed' && exit 1
