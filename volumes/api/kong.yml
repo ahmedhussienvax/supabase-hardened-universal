@@ -41,6 +41,14 @@ services:
           - /pg_meta
         strip_path: true
 
+  - name: platform-api
+    url: http://supabase-studio:3000
+    routes:
+      - name: platform-api-route
+        paths:
+          - /api
+        strip_path: false
+
 plugins:
   - name: cors
     config:
