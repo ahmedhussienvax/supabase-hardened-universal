@@ -194,31 +194,31 @@ services:
       -
         type: bind
         source: ./volumes/db/realtime.sql
-        target: /docker-entrypoint-initdb.d/migrations/99-realtime.sql
+        target: /docker-entrypoint-initdb.d/99-realtime.sql
       -
         type: bind
         source: ./volumes/db/_supabase.sql
-        target: /docker-entrypoint-initdb.d/migrations/97-_supabase.sql
+        target: /docker-entrypoint-initdb.d/00-_supabase.sql
       -
         type: bind
         source: ./volumes/db/pooler.sql
-        target: /docker-entrypoint-initdb.d/migrations/99-pooler.sql
+        target: /docker-entrypoint-initdb.d/99-pooler.sql
       -
         type: bind
         source: ./volumes/db/webhooks.sql
-        target: /docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql
+        target: /docker-entrypoint-initdb.d/98-webhooks.sql
       -
         type: bind
         source: ./volumes/db/roles.sql
-        target: /docker-entrypoint-initdb.d/init-scripts/99-roles.sql
+        target: /docker-entrypoint-initdb.d/99-roles.sql
       -
         type: bind
         source: ./volumes/db/jwt.sql
-        target: /docker-entrypoint-initdb.d/init-scripts/99-jwt.sql
+        target: /docker-entrypoint-initdb.d/99-jwt.sql
       -
         type: bind
         source: ./volumes/db/logs.sql
-        target: /docker-entrypoint-initdb.d/migrations/99-logs.sql
+        target: /docker-entrypoint-initdb.d/99-logs.sql
       - 'supabase-db-config:/etc/postgresql-custom'
   supabase-analytics:
     image: 'supabase/logflare:1.31.2'
@@ -576,8 +576,8 @@ services:
       - 'PG_META_DB_USER=supabase_admin'
       - 'PG_META_DB_PASSWORD=${SERVICE_PASSWORD_POSTGRES}'
       - 'PG_META_DB_SSLMODE=disable'
-      - 'CRYPTO_KEY=${PG_META_CRYPTO_KEY:-odWJjkIkkYLu5QtoqT0J2JNK9zoN0AbQ}'
-      - 'PG_META_CRYPTO_KEY=${PG_META_CRYPTO_KEY:-odWJjkIkkYLu5QtoqT0J2JNK9zoN0AbQ}'
+      - 'CRYPTO_KEY=${PG_META_CRYPTO_KEY}'
+      - 'PG_META_CRYPTO_KEY=${PG_META_CRYPTO_KEY}'
   supabase-edge-functions:
     image: 'supabase/edge-runtime:v1.67.4'
     restart: unless-stopped

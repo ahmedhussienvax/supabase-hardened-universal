@@ -1,10 +1,10 @@
-_format_version: '1.1'
+_format_version: "1.1"
 
 services:
   - name: auth
     url: http://supabase-auth:9999
     routes:
-      - name: auth-v1
+      - name: auth-route
         paths:
           - /auth/v1
         strip_path: true
@@ -12,118 +12,40 @@ services:
   - name: rest
     url: http://supabase-rest:3000
     routes:
-      - name: rest-v1
+      - name: rest-route
         paths:
           - /rest/v1
         strip_path: true
-    plugins:
-      - name: key-auth
-        config:
-          key_names:
-            - apikey
 
   - name: storage
     url: http://supabase-storage:5000
     routes:
-      - name: storage-v1
+      - name: storage-route
         paths:
           - /storage/v1
         strip_path: true
-    plugins:
-      - name: key-auth
-        config:
-          key_names:
-            - apikey
 
   - name: realtime
     url: http://realtime-dev:4000
     routes:
-      - name: realtime-v1
+      - name: realtime-websocket
         paths:
           - /realtime/v1
         strip_path: true
-    plugins:
-      - name: key-auth
-        config:
-          key_names:
-            - apikey
 
   - name: meta
     url: http://supabase-meta:8080
     routes:
-      - name: meta-v1
+      - name: meta-route
         paths:
-          - /pg
-        strip_path: false
-
-  - name: studio-api
-    url: http://supabase-studio:3000
-    routes:
-      - name: studio-api-v1
-        paths:
-          - /api
-        strip_path: false
-
-  # --- Supabase Platform Master UI Mocks ---
-  - name: platform-notifications
-    url: http://localhost:8080
-    routes:
-      - name: platform-notifications-route
-        paths: [/api/platform/notifications]
-    plugins:
-      - name: request-termination
-        config: {status_code: 200, content_type: application/json, body: "[]"}
-
-  - name: platform-project-context
-    url: http://localhost:8080
-    routes:
-      - name: platform-project-context-route
-        paths: [/api/platform/projects/default]
-    plugins:
-      - name: request-termination
-        config:
-          status_code: 200
-          content_type: application/json
-          body: |
-            {
-              "id": 1, "ref": "default", "name": "Master Build Project",
-              "organization_id": 1, "cloud_provider": "local", "region": "local"
-            }
-
-  - name: platform-projects
-    url: http://localhost:8080
-    routes:
-      - name: platform-projects-route
-        paths: [/api/platform/projects]
-    plugins:
-      - name: request-termination
-        config:
-          status_code: 200
-          content_type: application/json
-          body: |
-            [
-              {
-                "id": 1, "ref": "default", "name": "Master Build Project",
-                "organization_id": 1, "cloud_provider": "local", "region": "local", "status": "ACTIVE_HEALTHY"
-              }
-            ]
-
-  - name: platform-log-drains
-    url: http://localhost:8080
-    routes:
-      - name: platform-log-drains-route
-        paths: [/api/platform/projects/default/analytics/log-drains]
-    plugins:
-      - name: request-termination
-        config: {status_code: 200, content_type: application/json, body: '{"data": []}'}
-
-
+          - /pg_meta
+        strip_path: true
 
 plugins:
   - name: cors
     config:
       origins:
-        - '*'
+        - "*"
       methods:
         - GET
         - POST
@@ -134,28 +56,18 @@ plugins:
       headers:
         - Accept
         - Accept-Version
-        - Content-Length
-        - Content-MD5
         - Content-Type
-        - Date
-        - X-Auth-Token
-        - X-Client-Info
-        - X-Supabase-Api-Version
-        - accept-profile
+        - Api-Version
+        - Range
+        - Origination
+        - Authorization
+        - x-client-info
+        - x-client-relay-protocol
+        - x-supabase-auth
         - apikey
-        - authorization
-        - prefer
-        - profile-key
-        - X-Request-Id
       exposed_headers:
-        - x-supabase-api-version
-      max_age: 86400
-      preflight_continue: false
-
-consumers:
-  - username: anon
-    keyauth_credentials:
-      - key: "${SUPABASE_ANON_KEY}"
-  - username: service_role
-    keyauth_credentials:
-      - key: "${SUPABASE_SERVICE_KEY}"
+        - Content-Range
+        - X-Total-Count
+        - Content-Type
+      credentials: true
+      max_age: 3600
