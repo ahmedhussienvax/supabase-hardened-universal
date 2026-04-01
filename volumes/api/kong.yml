@@ -1,0 +1,108 @@
+_format_version: '1.1'
+
+services:
+  - name: auth
+    url: http://supabase-auth:9999
+    routes:
+      - name: auth-v1
+        paths:
+          - /auth/v1
+        strip_path: true
+
+  - name: rest
+    url: http://supabase-rest:3000
+    routes:
+      - name: rest-v1
+        paths:
+          - /rest/v1
+        strip_path: true
+    plugins:
+      - name: key-auth
+        config:
+          key_names:
+            - apikey
+
+  - name: storage
+    url: http://supabase-storage:5000
+    routes:
+      - name: storage-v1
+        paths:
+          - /storage/v1
+        strip_path: true
+    plugins:
+      - name: key-auth
+        config:
+          key_names:
+            - apikey
+
+  - name: realtime
+    url: http://realtime-dev:4000
+    routes:
+      - name: realtime-v1
+        paths:
+          - /realtime/v1
+        strip_path: true
+    plugins:
+      - name: key-auth
+        config:
+          key_names:
+            - apikey
+
+  - name: meta
+    url: http://supabase-meta:8080
+    routes:
+      - name: meta-v1
+        paths:
+          - /pg
+        strip_path: false
+
+  - name: studio-api
+    url: http://supabase-studio:3000
+    routes:
+      - name: studio-api-v1
+        paths:
+          - /api
+        strip_path: false
+
+
+
+plugins:
+  - name: cors
+    config:
+      origins:
+        - '*'
+      methods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      headers:
+        - Accept
+        - Accept-Version
+        - Content-Length
+        - Content-MD5
+        - Content-Type
+        - Date
+        - X-Auth-Token
+        - X-Client-Info
+        - X-Supabase-Api-Version
+        - accept-profile
+        - apikey
+        - authorization
+        - prefer
+        - profile-key
+        - X-Request-Id
+      exposed_headers:
+        - x-supabase-api-version
+      max_age: 86400
+      preflight_continue: false
+
+consumers:
+  - username: anon
+    keyauth_credentials:
+      - key: "${SUPABASE_ANON_KEY}"
+  - username: service_role
+    keyauth_credentials:
+      - key: "${SUPABASE_SERVICE_KEY}"

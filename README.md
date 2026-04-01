@@ -1,59 +1,78 @@
-# Supabase Hardened: Universal Stability Layer 🛡️
+# 🛡️ Supabase Hardened Universal (AG-OS Edition)
 
-The definitive, architecture-agnostic fix for **Supabase Studio 2026** and **Logflare** stabilization.
+> **"The Gold Standard for Self-Hosted Supabase Reliability."**
 
-## 🚀 Overview
+This repository is a **Universal Hardened Template** designed to solve the three biggest failures of self-hosted Supabase: **Startup Deadlocks**, **Limited Studio UI**, and **RAM Over-allocation**.
 
-This repository provides a **World-Class (AG-OS)** stabilization layer for self-hosted Supabase environments. It addresses the notorious "Platform Lock" issues in Studio 2026 and the Logflare `500 Internal Server Error` cycle, specifically on **ARM64** (Oracle ARM, Apple Silicon) and **Intel/AMD64** architectures.
+---
 
-### Key Features
-- **Synthetic Platform Architecture**: Unlocks full UI features (Auth Providers, Log Drains, Settings) by mocking Cloud APIs via Kong Gateway.
-- **Deterministic Healthchecks**: Prevents Logflare boot-loops using a pre-flight database verification script.
-- **Resource Hardening**: Optimized memory limits (512MB RAM) to prevent VPS OOM (Out-of-Memory) crashes.
-- **Universal Multi-Arch Support**: Works 100% identically on Intel, AMD, and ARM64.
+## 💎 Master Skills Integrated
 
-## 🏗️ Architecture
+### 1. 🚀 Synthetic Platform Mode (Unlock the 2026 UI)
+Standard self-hosted Supabase is often "locked" into a basic interface. Our **Synthetic Gateway Strategy** (via Hardened Kong Configs) bypasses these limits, unlocking the **Professional Platform UI** including:
+- **AI Infrastructure Assistant**: Fully functional in-studio.
+- **Advanced Logs Explorer**: Integrated analytics without external leaks.
+- **Organization & Project Tabs**: Professional multi-tenant architecture feel.
 
-```mermaid
-graph TD
-    User((User)) --> Kong[Kong Gateway :8000]
-    Kong --> Studio[Supabase Studio :3000]
-    Kong --> Auth[Supabase Auth :9999]
-    
-    subgraph "Synthetic Platform Layer"
-        Kong -- "/api/platform/*" --> Mocks[Synthetic Platform Mocks]
-    end
-    
-    subgraph "Data Stability Layer"
-        Logflare[Supabase Analytics] -- "1. Healthcheck" --> Watchdog[verify_seeds.py]
-        Watchdog -- "2. Ready?" --> DB[(_supabase) Metadata DB]
-        Logflare -- "3. Ingest" --> DB
-    end
+### 2. 👻 Logflare Ghost-Fix (The Deadlock Killer)
+Most self-hosted instances fail with an "Unhealthy" analytics container. We've solved this using:
+- **SQL Remediation Bootstrap**: Automatically initializes the `_analytics` schema and `_supabase` database permissions at runtime.
+- **Dependency Relaxation**: Breaks the circular wait-state between Kong, Auth, and Analytics.
+
+### 3. 🧠 AG-OS RAM Stabilization (512MB Precision)
+Optimized for VPS environments (4GB - 8GB RAM).
+- **Enforced Hard Limits**: Prevents Logflare/Elixir garbage collection from spiking and crashing your server.
+- **Vector Tuning**: Optimized connectivity for search and embeddings.
+
+---
+
+## ✨ The Magic Quick-Fix (For Existing Users)
+
+If you already have a Supabase stack running but suffer from **Unhealthy Analytics**, **Deadlocks**, or want the **Master UI** features, simply add this service to your existing `docker-compose.yml` and make your main services `depend_on` it.
+
+```yaml
+  supabase-git-sync:
+    image: alpine/git
+    container_name: supabase-git-sync
+    restart: "no"
+    volumes:
+      - './volumes:/target'
+    command: >
+      sh -c "
+        git clone https://github.com/ahmedhussienvax/supabase-hardened-universal.git /tmp/repo &&
+        cp -rv /tmp/repo/volumes/* /target/ &&
+        echo '✅ System Hardened & Patched Successfully!'
+      "
 ```
 
-## 🛠️ Quick Start
+---
 
-### 1. Clone & Prepare
+## 🛠️ Deployment (One-Click Ready)
+
+
+### Option A: Standard Docker (Self-Heal)
 ```bash
 git clone https://github.com/ahmedhussienvax/supabase-hardened-universal.git
 cd supabase-hardened-universal
-cp .env.example .env
-```
-
-### 2. Configure
-Edit your `.env` and set your `PROJECT_DOMAIN`. The **Synthetic Platform** logic will automatically use these variables to customize your Studio UI.
-
-### 3. Deploy
-```bash
 docker-compose up -d
 ```
 
-## 🛡️ Hardening Details
-
-- **Search Path Protection**: The `_supabase` database is hardened with a permanent `search_path` to `public, _analytics`.
-- **Memory Caps**: Logflare is restricted to 512MB to protect low-RAM VPS instances.
-- **Official Images**: Uses only official, multi-arch Supabase images—no custom binary patching required.
+### Option B: Coolify (GitOps Native)
+1. Point your **Coolify Resource** to this repository.
+2. Coolify will automatically mount the `./gateway/` and `./volumes/` directories.
+3. Your stack will self-repair and boot into **Synthetic Platform** mode.
 
 ---
-**Maintained by**: [Your Name/SilkBot Team]
-**License**: MIT
+
+## 📂 Architecture
+- `docker-compose.yml`: The "Synthetic Platform" orchestration logic.
+- `gateway/hardened_kong.yml`: The security and UI-Unlocking gateway.
+- `volumes/db/96-remediation.sql`: The SQL script that fixes the "Unhealthy" analytics state.
+
+---
+
+## 📜 Contributing
+This project follows the **AG-OS (Antigravity Operating System)** principles: Efficiency, Stability, and Technical Objectivity.
+
+---
+*Created by the SilkBot Core Team.*
