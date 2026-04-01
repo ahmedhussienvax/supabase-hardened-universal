@@ -40,6 +40,34 @@ services:
         paths:
           - /pg_meta
         strip_path: true
+      - name: meta-platform-route
+        paths:
+          - /api/projects/default/db
+        strip_path: true
+
+  - name: auth-platform
+    url: http://supabase-auth:9999/auth/v1
+    routes:
+      - name: auth-platform-route
+        paths:
+          - /api/projects/default/auth/v1
+        strip_path: true
+
+  - name: rest-platform
+    url: http://supabase-rest:3000/rest/v1
+    routes:
+      - name: rest-platform-route
+        paths:
+          - /api/projects/default/rest/v1
+        strip_path: true
+
+  - name: storage-platform
+    url: http://supabase-storage:5000/storage/v1
+    routes:
+      - name: storage-platform-route
+        paths:
+          - /api/projects/default/storage/v1
+        strip_path: true
 
   - name: platform-api
     url: http://supabase-studio:3000
