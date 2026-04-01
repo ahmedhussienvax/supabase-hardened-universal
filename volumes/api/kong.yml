@@ -64,6 +64,59 @@ services:
           - /api
         strip_path: false
 
+  # --- Supabase Platform Master UI Mocks ---
+  - name: platform-notifications
+    url: http://localhost:8080
+    routes:
+      - name: platform-notifications-route
+        paths: [/api/platform/notifications]
+    plugins:
+      - name: request-termination
+        config: {status_code: 200, content_type: application/json, body: "[]"}
+
+  - name: platform-project-context
+    url: http://localhost:8080
+    routes:
+      - name: platform-project-context-route
+        paths: [/api/platform/projects/default]
+    plugins:
+      - name: request-termination
+        config:
+          status_code: 200
+          content_type: application/json
+          body: |
+            {
+              "id": 1, "ref": "default", "name": "Master Build Project",
+              "organization_id": 1, "cloud_provider": "local", "region": "local"
+            }
+
+  - name: platform-projects
+    url: http://localhost:8080
+    routes:
+      - name: platform-projects-route
+        paths: [/api/platform/projects]
+    plugins:
+      - name: request-termination
+        config:
+          status_code: 200
+          content_type: application/json
+          body: |
+            [
+              {
+                "id": 1, "ref": "default", "name": "Master Build Project",
+                "organization_id": 1, "cloud_provider": "local", "region": "local", "status": "ACTIVE_HEALTHY"
+              }
+            ]
+
+  - name: platform-log-drains
+    url: http://localhost:8080
+    routes:
+      - name: platform-log-drains-route
+        paths: [/api/platform/projects/default/analytics/log-drains]
+    plugins:
+      - name: request-termination
+        config: {status_code: 200, content_type: application/json, body: '{"data": []}'}
+
 
 
 plugins:
