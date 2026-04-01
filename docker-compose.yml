@@ -1,0 +1,40 @@
+version: '3.8'
+services:
+  supabase-kong:
+    image: 'kong:2.8.1'
+    restart: unless-stopped
+    environment:
+      - KONG_DATABASE=off
+      - KONG_DECLARATIVE_CONFIG=/home/kong/kong.yml
+      - STUDO_DEFAULT_PROJECT=${STUDIO_DEFAULT_PROJECT:-Default Project}
+    volumes:
+      - ./gateway/hardened_kong.yml:/home/kong/kong.yml
+    networks: [supabase_network]
+
+  supabase-studio:
+    image: 'supabase/studio:latest'
+    restart: unless-stopped
+    environment:
+      - IS_PLATFORM=true
+      - NEXT_PUBLIC_IS_PLATFORM=true
+      - NEXT_PUBLIC_API_URL=${SERVICE_URL_SUPABASEKONG}/api
+    depends_on: [supabase-kong]
+    networks: [supabase_network]
+
+  supabase-analytics:
+    image: 'supabase/logflare:latest'
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: ${LOGFLARE_MEMORY_LIMIT:-512M}
+    environment:
+      - DB_DATABASE=_supabase
+      - DB_HOSTNAME=supabase-db
+    depends_on:
+      supabase-db: {condition: service_healthy}
+    networks: [supabase_network]
+
+networks:
+  supabase_network:
+    external: false

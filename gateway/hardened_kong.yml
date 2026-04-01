@@ -1,0 +1,37 @@
+_format_version: '2.1'
+_transform: true
+
+services:
+  - name: platform-notifications
+    url: http://localhost:8080
+    routes:
+      - name: platform-notifications-route
+        paths: [/api/platform/notifications]
+    plugins:
+      - name: request-termination
+        config: {status_code: 200, content_type: application/json, body: "[]"}
+
+  - name: platform-project-context
+    url: http://localhost:8080
+    routes:
+      - name: platform-project-context-route
+        paths: [/api/platform/projects/default]
+    plugins:
+      - name: request-termination
+        config:
+          status_code: 200
+          content_type: application/json
+          body: |
+            {
+              "id": 1, "ref": "default", "name": "${STUDIO_DEFAULT_PROJECT}",
+              "organization_id": 1, "cloud_provider": "local", "region": "local"
+            }
+
+  - name: platform-log-drains
+    url: http://localhost:8080
+    routes:
+      - name: platform-log-drains-route
+        paths: [/api/platform/projects/default/analytics/log-drains]
+    plugins:
+      - name: request-termination
+        config: {status_code: 200, content_type: application/json, body: '{"data": []}'}
