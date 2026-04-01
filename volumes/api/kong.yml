@@ -44,8 +44,8 @@ services:
 plugins:
   - name: cors
     config:
-      origins:
-        - "*"
+      origins: 
+        - '*'
       methods:
         - GET
         - POST

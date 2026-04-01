@@ -209,8 +209,8 @@ services:
         target: /docker-entrypoint-initdb.d/98-webhooks.sql
       -
         type: bind
-        source: ./volumes/db/roles.sql
-        target: /docker-entrypoint-initdb.d/99-roles.sql
+        source: ./volumes/db/init.sh
+        target: /docker-entrypoint-initdb.d/init.sh
       -
         type: bind
         source: ./volumes/db/jwt.sql
