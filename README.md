@@ -35,7 +35,7 @@ graph TD
 
 ### 1. Clone & Prepare
 ```bash
-git clone https://github.com/your-username/supabase-hardened-universal.git
+git clone https://github.com/ahmedhussienvax/supabase-hardened-universal.git
 cd supabase-hardened-universal
 cp .env.example .env
 ```
