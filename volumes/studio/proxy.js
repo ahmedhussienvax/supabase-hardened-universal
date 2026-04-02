@@ -24,6 +24,14 @@ const env = {
   serviceKey:  process.env.SUPABASE_SERVICE_KEY        || '',
 };
 
+// ─── Path Normalization ────────────────────────────────────────────────────────
+function normalizePath(pathname) {
+  if (!pathname) return '/';
+  // Remove trailing slashes and ensure lowercase for reliable matching
+  return pathname.replace(/\/+$/, '') || '/';
+}
+
+
 // ─── Static mocks ─────────────────────────────────────────────────────────────
 const STATIC = {
   '/api/platform/profile': {
@@ -71,7 +79,15 @@ const STATIC = {
   '/api/platform/projects/default/billing/addons': {
     ref: 'default', selected_addons: [], available_addons: [],
   },
+  '/api/platform/settings': {
+    is_platform: true,
+    feature_flags: {
+      project_creation_enabled: true,
+      billing_enabled: false,
+    }
+  },
 };
+
 
 // ─── Dynamic inference ────────────────────────────────────────────────────────
 const ARRAY_SUFFIXES = [
@@ -87,9 +103,33 @@ function inferResponse(pathname) {
 }
 
 function isPlatformRoute(pathname) {
-  return pathname.startsWith('/api/platform/') ||
-         pathname.startsWith('/api/v1/projects/');
+  const normalized = normalizePath(pathname);
+  return normalized.startsWith('/api/platform') ||
+         normalized.startsWith('/api/v1/projects');
 }
+
+function getStaticMock(pathname) {
+  const normalized = normalizePath(pathname);
+  
+  // 1. Direct match in STATIC map
+  if (STATIC[normalized] !== undefined) return STATIC[normalized];
+
+  // 2. Dynamic Project Ref Match (e.g. /api/v1/projects/[REF]/api-keys)
+  // We check if the path matches the pattern but with a different project ref
+  for (const staticPath of Object.keys(STATIC)) {
+    if (staticPath.includes('/projects/default/')) {
+      const pattern = staticPath.replace('/projects/default/', '/projects/[^/]+/');
+      const regex = new RegExp(`^${pattern}$`);
+      if (regex.test(normalized)) {
+        console.log(`[mock:dynamic-ref] Local path ${normalized} matches static template ${staticPath}`);
+        return STATIC[staticPath];
+      }
+    }
+  }
+
+  return undefined;
+}
+
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function sendJSON(res, status, data) {
@@ -126,7 +166,10 @@ function proxyToStudio(req, res) {
 
 // ─── Server ───────────────────────────────────────────────────────────────────
 const server = http.createServer((req, res) => {
-  const pathname = url.parse(req.url).pathname;
+  const rawPath  = url.parse(req.url).pathname;
+  const pathname = normalizePath(rawPath);
+
+  console.log(`[sidecar] Incoming: ${req.method} ${rawPath}`);
 
   // Health check
   if (pathname === '/health') {
@@ -139,22 +182,25 @@ const server = http.createServer((req, res) => {
     return res.end();
   }
 
-  // Static mock — exact match
-  if (STATIC[pathname] !== undefined) {
-    console.log(`[mock:static]  ${req.method} ${pathname}`);
-    return sendJSON(res, 200, STATIC[pathname]);
+  // Check for static or templated mock
+  const mockData = getStaticMock(rawPath) || getStaticMock(pathname);
+  if (mockData !== undefined) {
+    console.log(`[mock:hit]  ${req.method} ${rawPath}`);
+    return sendJSON(res, 200, mockData);
   }
 
   // Dynamic mock — platform routes not in static map
   if (isPlatformRoute(pathname)) {
     const mock = inferResponse(pathname);
-    console.log(`[mock:dynamic] ${req.method} ${pathname} → ${Array.isArray(mock) ? '[]' : '{}'}`);
+    console.log(`[mock:infer] ${req.method} ${rawPath} → ${Array.isArray(mock) ? '[]' : '{}'}`);
     return sendJSON(res, 200, mock);
   }
 
   // Passthrough → real Studio
+  console.log(`[proxy:pass] ${req.method} ${rawPath}`);
   proxyToStudio(req, res);
 });
+
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`\n[sidecar] Supabase Platform API Proxy started`);

@@ -135,6 +135,7 @@ services:
       - 'traefik.http.routers.supabase-studio.rule=Host(`${SERVICE_FQDN_SUPABASESTUDIO:-supabase-studio.${PROJECT_DOMAIN:-localhost}}`)'
       - traefik.http.routers.supabase-studio.entrypoints=https
       - traefik.http.routers.supabase-studio.tls.certresolver=letsencrypt
+      - traefik.http.routers.supabase-studio.priority=100
       - traefik.http.services.supabase-studio.loadbalancer.server.port=3001
       - traefik.docker.network=coolify
     networks:
