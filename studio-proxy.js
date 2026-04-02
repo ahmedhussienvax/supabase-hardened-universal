@@ -63,5 +63,5 @@ const server = http.createServer((req, res) => {
   });
 });
 
-console.log(`🚀 Supabase Studio Proxy (AG-OS) starting on port ${PROXY_PORT}...`);
+console.log(`Supabase Studio Proxy (AG-OS) starting on port ${PROXY_PORT}...`);
 server.listen(PROXY_PORT);

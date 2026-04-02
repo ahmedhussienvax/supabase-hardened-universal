@@ -7,18 +7,18 @@ services:
       - './volumes:/target'
     command: >
       sh -c "
-        echo '🚀 Starting Universal Master Sync...' &&
+        echo 'Starting Universal Master Sync...' &&
         apk add --no-cache git openssh &&
         rm -rf /tmp/repo &&
         if git clone --depth 1 https://github.com/ahmedhussienvax/supabase-hardened-universal.git /tmp/repo; then
-          echo '✅ Clone Successful' &&
+          echo 'Clone Successful' &&
           mkdir -p /target &&
           rm -rf /target/db/init.sh &&
           cp -rf /tmp/repo/volumes/* /target/ &&
           cp -f /tmp/repo/entrypoint.sh /target/ &&
-          echo '✅ Sync Completed Successfully!'
+          echo 'Sync Completed Successfully!'
         else
-          echo '❌ Sync Failed' && exit 1
+          echo 'Sync Failed' && exit 1
         fi
       "
     networks:
@@ -34,7 +34,7 @@ services:
       - -c
       - |
         set -e
-        echo "🔧 Initializing Edge Functions..."
+        echo "Initializing Edge Functions..."
         mkdir -p /volumes/functions/main /volumes/functions/hello
         if [ ! -f /volumes/functions/main/index.ts ] || [ ! -s /volumes/functions/main/index.ts ]; then
           echo 'import { serve } from "https://deno.land/std@0.131.0/http/server.ts"; serve((req) => new Response("Main Function Active"));' > /volumes/functions/main/index.ts
@@ -42,7 +42,7 @@ services:
         if [ ! -f /volumes/functions/hello/index.ts ] || [ ! -s /volumes/functions/hello/index.ts ]; then
           echo 'import { serve } from "https://deno.land/std@0.131.0/http/server.ts"; serve((req) => new Response("Hello World"));' > /volumes/functions/hello/index.ts
         fi
-        echo "✅ Initialization Successful."
+        echo "Initialization Successful."
     networks:
       - coolify
 

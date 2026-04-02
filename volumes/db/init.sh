@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "🐘 Supabase Database Initializer: Injecting Secrets..."
+echo "Supabase Database Initializer: Injecting Secrets..."
 
 # Define roles and set passwords using environment variables
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
@@ -36,4 +36,4 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
   GRANT ALL ON SCHEMA storage TO supabase_storage_admin;
 EOSQL
 
-echo "✅ Database Roles Initialized with Real Secrets."
+echo "Database Roles Initialized with Real Secrets."

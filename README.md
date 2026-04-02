@@ -1,4 +1,4 @@
-# 🛡️ Supabase Hardened Universal (AG-OS Edition)
+# Supabase Hardened Universal (AG-OS Edition)
 
 > **"The Gold Standard for Self-Hosted Supabase Reliability."**
 
@@ -12,7 +12,7 @@ Most setups struggle with database role passwords. We use an **init.sh** automat
 
 ---
 
-## ✨ The Magic Quick-Fix (For Existing Users)
+## The Magic Quick-Fix (For Existing Users)
 
 If you already have a Supabase stack running but suffer from **Unhealthy Analytics**, **Deadlocks**, or want the **Master UI** features, simply add this service to your existing `docker-compose.yml` and make your main services `depend_on` it.
 
@@ -29,13 +29,13 @@ If you already have a Supabase stack running but suffer from **Unhealthy Analyti
         git clone https://github.com/ahmedhussienvax/supabase-hardened-universal.git /tmp/repo &&
         cp -rv /tmp/repo/volumes/* /target/ &&
         cp -fv /tmp/repo/entrypoint.sh /target/ &&
-        echo '✅ System Hardened & Patched Successfully!'
+        echo 'System Hardened & Patched Successfully!'
       "
 ```
 
 ---
 
-## 🛠️ Deployment (One-Click Ready)
+## Deployment (One-Click Ready)
 
 ### Option A: Standard Docker (Self-Heal)
 
