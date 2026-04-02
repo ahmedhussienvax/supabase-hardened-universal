@@ -7,7 +7,7 @@ defmodule Supavisor.Config do
       db_port: 5432,
       db_host: "supabase-db",
       db_user: "supabase_admin",
-      db_password: "${SERVICE_PASSWORD_POSTGRES}",
+      db_password: "${SERVICE_PASSWORD_POSTGRES:-postgres}",
       db_database: "postgres",
       pool_size: 20,
       max_connections: 100,
