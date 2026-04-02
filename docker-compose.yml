@@ -165,6 +165,12 @@ services:
       - './studio-entrypoint.sh:/app/studio-entrypoint.sh:ro'
     networks:
       - coolify
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
     extra_hosts:
       - "supabase.${PROJECT_DOMAIN:-localhost}:host-gateway"
 
@@ -259,6 +265,8 @@ services:
     deploy:
       resources:
         limits:
+          memory: 1G
+        reservations:
           memory: 512M
     environment:
       - LOGFLARE_NODE_HOST=0.0.0.0
@@ -457,6 +465,12 @@ services:
       - LOG_LEVEL=error
       - RUN_JANITOR=true
       - JANITOR_INTERVAL=60000
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
     command: "sh -c \"/app/bin/migrate && /app/bin/realtime eval 'Realtime.Release.seeds(Realtime.Repo)' && /app/bin/server\""
 
   supabase-minio:
