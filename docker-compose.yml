@@ -4,7 +4,7 @@ services:
     container_name: supabase-git-sync
     restart: "no"
     volumes:
-      - './volumes:/target'
+      - '.:/target'
     command: >
       sh -c "
         echo 'Starting Universal Master Sync...' &&
@@ -12,9 +12,11 @@ services:
         rm -rf /tmp/repo &&
         if git clone --depth 1 https://github.com/ahmedhussienvax/supabase-hardened-universal.git /tmp/repo; then
           echo 'Clone Successful' &&
-          mkdir -p /target &&
-          rm -rf /target/db/init.sh &&
-          cp -rf /tmp/repo/volumes/* /target/ &&
+          mkdir -p /target/volumes &&
+          rm -rf /target/volumes/db/init.sh &&
+          cp -rf /tmp/repo/volumes/* /target/volumes/ &&
+          cp -f /tmp/repo/studio-entrypoint.sh /target/ &&
+          cp -f /tmp/repo/studio-proxy.js /target/ &&
           cp -f /tmp/repo/entrypoint.sh /target/ &&
           echo 'Sync Completed Successfully!'
         else
