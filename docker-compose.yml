@@ -17,7 +17,7 @@ services:
           cp -rf /tmp/repo/volumes/* /target/volumes/ &&
           # Force refresh of api and studio folders to clear old directory-file collisions
           rm -rf /target/volumes/api && mkdir -p /target/volumes/api && cp -f /tmp/repo/volumes/api/kong.yml /target/volumes/api/kong.yml &&
-          rm -rf /target/volumes/studio && mkdir -p /target/volumes/studio && cp -f /tmp/repo/volumes/studio/proxy.js /target/volumes/studio/proxy.js &&
+          rm -rf /target/volumes/studio && mkdir -p /target/volumes/studio && cp -f /tmp/repo/volumes/studio/proxy.js /target/volumes/studio/proxy.js || echo "CRITICAL: proxy.js missing in repo! PUSH LOCAL CHANGES TO GITHUB FIRST." &&
           echo 'Sync Completed Successfully!'
         else
           echo 'Sync Failed' && exit 1
