@@ -4,7 +4,8 @@
 
 This repository is a **Universal Hardened Template** designed to solve the three biggest failures of self-hosted Supabase: **Startup Deadlocks**, **Limited Studio UI**, and **RAM Over-allocation**.
 
-### 🌟 New: Zero-Dependency Studio Sidecar
+## 🌟 New: Zero-Dependency Studio Sidecar
+
 Instead of fragile, injected node.js hacks over the Studio binary, this repository implements a natively robust `studio-proxy` sidecar. It runs purely on standard Node (`node:20-alpine`) using no external modules (no `http-proxy` or `express`). Traefik correctly routes user API traffic to this sidecar which dynamically intercepts unsupported routes (like Billing, Edge Functions sync) and delegates the remainder safely to Supabase Studio.
 
 ---
