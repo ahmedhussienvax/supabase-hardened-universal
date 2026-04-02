@@ -67,12 +67,4 @@ docker-compose up -d
 - `volumes/db/init.sh`: The secret injection logic for DB roles.
 - `volumes/db/_supabase.sql`: The remediation script for Logflare/Analytics.
 
----
-
-## 📜 Contributing
-
-This project follows the **AG-OS (Antigravity Operating System)** principles: Efficiency, Stability, and Technical Objectivity.
-
----
-
 *Created by the SilkBot Core Team.*
