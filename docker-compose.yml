@@ -15,9 +15,9 @@ services:
           mkdir -p /target/volumes &&
           rm -rf /target/volumes/db/init.sh &&
           cp -rf /tmp/repo/volumes/* /target/volumes/ &&
-          cp -f /tmp/repo/studio-entrypoint.sh /target/ &&
-          cp -f /tmp/repo/studio-proxy.js /target/ &&
-          cp -f /tmp/repo/entrypoint.sh /target/ &&
+          # Force refresh of api and studio folders to clear old directory-file collisions
+          rm -rf /target/volumes/api && mkdir -p /target/volumes/api && cp -f /tmp/repo/volumes/api/kong.yml /target/volumes/api/kong.yml &&
+          rm -rf /target/volumes/studio && mkdir -p /target/volumes/studio && cp -f /tmp/repo/volumes/studio/proxy.js /target/volumes/studio/proxy.js &&
           echo 'Sync Completed Successfully!'
         else
           echo 'Sync Failed' && exit 1
