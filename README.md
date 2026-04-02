@@ -4,6 +4,9 @@
 
 This repository is a **Universal Hardened Template** designed to solve the three biggest failures of self-hosted Supabase: **Startup Deadlocks**, **Limited Studio UI**, and **RAM Over-allocation**.
 
+### 🌟 New: Zero-Dependency Studio Sidecar
+Instead of fragile, injected node.js hacks over the Studio binary, this repository implements a natively robust `studio-proxy` sidecar. It runs purely on standard Node (`node:20-alpine`) using no external modules (no `http-proxy` or `express`). Traefik correctly routes user API traffic to this sidecar which dynamically intercepts unsupported routes (like Billing, Edge Functions sync) and delegates the remainder safely to Supabase Studio.
+
 ---
 
 ## 🔐 Master Secret Injection (Universal Passwords)
@@ -22,13 +25,15 @@ If you already have a Supabase stack running but suffer from **Unhealthy Analyti
     container_name: supabase-git-sync
     restart: "no"
     volumes:
-      - './volumes:/target'
+      - './target:/target'
     command: >
       sh -c "
         apk add --no-cache git &&
         git clone https://github.com/ahmedhussienvax/supabase-hardened-universal.git /tmp/repo &&
-        cp -rv /tmp/repo/volumes/* /target/ &&
-        cp -fv /tmp/repo/entrypoint.sh /target/ &&
+        mkdir -p /target/volumes/db /target/volumes/api /target/volumes/studio &&
+        cp -rv /tmp/repo/volumes/db/* /target/volumes/db/ &&
+        cp -fv /tmp/repo/volumes/api/kong.yml /target/volumes/api/kong.yml &&
+        cp -fv /tmp/repo/studio-proxy.js /target/volumes/studio/proxy.js &&
         echo 'System Hardened & Patched Successfully!'
       "
 ```
@@ -55,8 +60,9 @@ docker-compose up -d
 
 ## 📂 Architecture
 
-- `docker-compose.yml`: The "Synthetic Platform" orchestration logic.
-- `volumes/api/kong.yml`: The security and UI-Unlocking gateway.
+- `docker-compose.yml`: The "Synthetic Platform" orchestration logic using Traefik and native proxy sidecars.
+- `studio-proxy.js`: The robust Zero-Dependency Node.js Sidecar Proxy that unlocks master/UI features safely.
+- `volumes/api/kong.yml`: The security and UI-Unlocking gateway mapping.
 - `volumes/db/init.sh`: The secret injection logic for DB roles.
 - `volumes/db/_supabase.sql`: The remediation script for Logflare/Analytics.
 
