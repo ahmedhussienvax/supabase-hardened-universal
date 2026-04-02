@@ -126,10 +126,10 @@ services:
       - STUDIO_INTERNAL_PORT=3000
     volumes:
       - type: bind
-        source: ./studio-proxy.js
-        target: /app/proxy.js
+        source: ./volumes/studio
+        target: /app/studio
         read_only: true
-    command: node /app/proxy.js
+    command: node /app/studio/proxy.js
     labels:
       - traefik.enable=true
       - 'traefik.http.routers.supabase-studio.rule=Host(`${SERVICE_FQDN_SUPABASESTUDIO:-supabase-studio.${PROJECT_DOMAIN:-localhost}}`)'

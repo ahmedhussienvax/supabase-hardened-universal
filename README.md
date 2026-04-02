@@ -34,7 +34,7 @@ If you already have a Supabase stack running but suffer from **Unhealthy Analyti
         mkdir -p /target/volumes/db /target/volumes/api /target/volumes/studio &&
         cp -rv /tmp/repo/volumes/db/* /target/volumes/db/ &&
         cp -fv /tmp/repo/volumes/api/kong.yml /target/volumes/api/kong.yml &&
-        cp -fv /tmp/repo/studio-proxy.js /target/volumes/studio/proxy.js &&
+        cp -fv /tmp/repo/volumes/studio/proxy.js /target/volumes/studio/proxy.js &&
         echo 'System Hardened & Patched Successfully!'
       "
 ```
