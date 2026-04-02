@@ -29,16 +29,20 @@ services:
     restart: 'no'
     volumes:
       - './volumes/functions:/volumes/functions'
-    command: "sh -c \"
-      [ -d /volumes/functions/main/index.ts ] && rm -rf /volumes/functions/main/index.ts;
-      [ -d /volumes/functions/hello/index.ts ] && rm -rf /volumes/functions/hello/index.ts;
-      mkdir -p /volumes/functions/main /volumes/functions/hello &&
-      if [ ! -f /volumes/functions/main/index.ts ] || [ ! -s /volumes/functions/main/index.ts ]; then
-        echo 'import { serve } from \"https://deno.land/std@0.131.0/http/server.ts\"; serve((req) => new Response(\"Main Function Active\"));' > /volumes/functions/main/index.ts;
-      fi &&
-      if [ ! -f /volumes/functions/hello/index.ts ] || [ ! -s /volumes/functions/hello/index.ts ]; then
-        echo 'import { serve } from \"https://deno.land/std@0.131.0/http/server.ts\"; serve((req) => new Response(\"Hello World\"));' > /volumes/functions/hello/index.ts;
-      fi\""
+    command:
+      - sh
+      - -c
+      - |
+        set -e
+        echo "🔧 Initializing Edge Functions..."
+        mkdir -p /volumes/functions/main /volumes/functions/hello
+        if [ ! -f /volumes/functions/main/index.ts ] || [ ! -s /volumes/functions/main/index.ts ]; then
+          echo 'import { serve } from "https://deno.land/std@0.131.0/http/server.ts"; serve((req) => new Response("Main Function Active"));' > /volumes/functions/main/index.ts
+        fi
+        if [ ! -f /volumes/functions/hello/index.ts ] || [ ! -s /volumes/functions/hello/index.ts ]; then
+          echo 'import { serve } from "https://deno.land/std@0.131.0/http/server.ts"; serve((req) => new Response("Hello World"));' > /volumes/functions/hello/index.ts
+        fi
+        echo "✅ Initialization Successful."
     networks:
       - coolify
 
