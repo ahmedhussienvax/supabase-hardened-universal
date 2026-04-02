@@ -99,22 +99,63 @@ services:
         source: ./volumes/api/kong.yml
         target: /home/kong/temp.yml
 
+  # ── Studio Sidecar Proxy ────────────────────────────────────────────────────
+  # Intercepts /api/platform/* and /api/v1/* requests that don't exist in
+  # self-hosted, returning synthetic responses to prevent UI crashes.
+  # Traefik points to THIS container (port 3001), not directly to Studio.
+  studio-proxy:
+    image: node:20-alpine
+    container_name: studio-proxy
+    restart: unless-stopped
+    depends_on:
+      supabase-studio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    environment:
+      - 'STUDIO_DEFAULT_ORGANIZATION=${STUDIO_DEFAULT_ORGANIZATION:-Default Organization}'
+      - 'STUDIO_DEFAULT_PROJECT=${STUDIO_DEFAULT_PROJECT:-Default Project}'
+      - 'SUPABASE_ANON_KEY=${SERVICE_SUPABASEANON_KEY}'
+      - 'SUPABASE_SERVICE_KEY=${SERVICE_SUPABASESERVICE_KEY}'
+      - 'SUPABASE_PUBLIC_URL=${SERVICE_URL_SUPABASEKONG}'
+      - STUDIO_INTERNAL_HOST=supabase-studio
+      - STUDIO_INTERNAL_PORT=3000
+    volumes:
+      - type: bind
+        source: ./studio-proxy.js
+        target: /app/proxy.js
+        read_only: true
+    command: node /app/proxy.js
+    labels:
+      - traefik.enable=true
+      - 'traefik.http.routers.supabase-studio.rule=Host(`${SERVICE_FQDN_SUPABASESTUDIO:-supabase-studio.${PROJECT_DOMAIN:-localhost}}`)'
+      - traefik.http.routers.supabase-studio.entrypoints=https
+      - traefik.http.routers.supabase-studio.tls.certresolver=letsencrypt
+      - traefik.http.services.supabase-studio.loadbalancer.server.port=3001
+      - traefik.docker.network=coolify
+    networks:
+      - coolify
+
   supabase-studio:
     container_name: supabase-studio
     restart: unless-stopped
     image: 'supabase/studio:2026.03.30-sha-12a43e5'
-    entrypoint: /bin/sh
-    command: ["-c", "chmod +x /app/studio-entrypoint.sh && /app/studio-entrypoint.sh"]
+    working_dir: /app/apps/studio
+    command: ["node", "server.js"]
     healthcheck:
       test:
         - CMD
-        - curl
-        - '-f'
-        - 'http://127.0.0.1:3001/api/platform/profile'
+        - node
+        - '-e'
+        - "require('http').get('http://127.0.0.1:3000/api/platform/profile', (r) => {process.exit(r.statusCode < 500 ? 0 : 1)}).on('error', () => process.exit(1))"
       timeout: 10s
       interval: 15s
       retries: 5
-      start_period: 40s
+      start_period: 90s
     depends_on:
       supabase-analytics:
         condition: service_started
@@ -124,12 +165,6 @@ services:
         condition: service_started
       supabase-meta:
         condition: service_started
-    labels:
-      - traefik.enable=true
-      - 'traefik.http.routers.supabase-studio.rule=Host(`${SERVICE_FQDN_SUPABASESTUDIO:-supabase-studio.${PROJECT_DOMAIN:-localhost}}`)'
-      - traefik.http.routers.supabase-studio.entrypoints=https
-      - traefik.http.routers.supabase-studio.tls.certresolver=letsencrypt
-      - traefik.http.services.supabase-studio.loadbalancer.server.port=3001
     environment:
       - HOSTNAME=0.0.0.0
       - 'STUDIO_PG_META_URL=http://supabase-meta:8080'
@@ -155,16 +190,13 @@ services:
       - NEXT_PUBLIC_ENABLE_LOGS=true
       - NEXT_ANALYTICS_BACKEND_PROVIDER=postgres
       - 'OPENAI_API_KEY=${OPENAI_API_KEY}'
-      # Supabase Universal Stabilization (AG-OS Edition)
       - IS_PLATFORM=true
       - NEXT_PUBLIC_IS_PLATFORM=true
-      - NEXT_PUBLIC_AI_ASSISTANT_ENABLED=true
-      - 'NEXT_PUBLIC_API_URL=${SERVICE_URL_SUPABASEKONG}/api'
+      - NEXT_PUBLIC_AI_ASSISTANT_ENABLED=false
+      - PORT=3000
     volumes:
       - './volumes/snippets:/app/snippets'
       - './volumes/functions:/app/edge-functions'
-      - './studio-proxy.js:/app/studio-proxy.js:ro'
-      - './studio-entrypoint.sh:/app/studio-entrypoint.sh'
     networks:
       - coolify
     deploy:
