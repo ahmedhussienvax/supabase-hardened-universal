@@ -1,11 +1,12 @@
 /**
- * Supabase Studio Platform API Sidecar Proxy
+ * Supabase Studio Universal Sidecar Proxy (v3.2.7)
  * 
- * Runs as a SEPARATE container (not inside Studio).
- * - Intercepts /api/platform/* and /api/v1/* → returns synthetic responses
- * - Proxies everything else → real Studio on supabase-studio:3000
+ * DESIGN PHILOSOPHY:
+ * 1. Greedy Interception: Catch ALL `/api/platform` and `/api/v1/projects` calls.
+ * 2. Ref-Agnostic: Automatically identify project refs from URLs and serve consistent mocks.
+ * 3. Fallback Safety: Always return 200 OK with valid JSON ({}) instead of 404 to satisfy UI.
  * 
- * Traefik routes HTTPS traffic here (port 3001), not to Studio directly.
+ * Traefik routes HTTPS traffic here (port 3001) -> proxies to Studio (port 3000).
  */
 
 'use strict';
@@ -24,7 +25,11 @@ const env = {
   serviceKey:  process.env.SUPABASE_SERVICE_KEY        || '',
 };
 
-// ─── Static mocks ─────────────────────────────────────────────────────────────
+// ─── Regex Matchers ───────────────────────────────────────────────────────────
+const RE_V1_PROJECT = /^\/api\/v1\/projects\/([^\/]+)/;
+const RE_PLATFORM   = /^\/api\/platform/;
+
+// ─── Expanded Static Mocks ────────────────────────────────────────────────────
 const STATIC = {
   '/api/platform/profile': {
     id: 1,
@@ -50,48 +55,48 @@ const STATIC = {
     status: 'ACTIVE_HEALTHY',
     inserted_at: '2024-01-01T00:00:00.000Z',
   }],
-  '/api/platform/projects/default': {
-    id: 1,
-    ref: 'default',
-    name: env.projectName,
-    organization_id: 1,
-    region: 'local',
-    status: 'ACTIVE_HEALTHY',
-    inserted_at: '2024-01-01T00:00:00.000Z',
-    preview_branches: [],
+  // Global settings/configs to satisfy UI loaders
+  '/api/platform/settings': {
+    maintenance: false,
+    updates: [],
   },
-  '/api/v1/projects/default/api-keys': [
-    { name: 'anon key',         api_key: env.anonKey,    tags: 'anon',         prefix: env.anonKey.slice(0, 10) },
-    { name: 'service_role key', api_key: env.serviceKey, tags: 'service_role', prefix: env.serviceKey.slice(0, 10) },
-  ],
-  '/api/platform/notifications':                           [],
-  '/api/v1/projects/default/functions':                   [],
-  '/api/platform/projects/default/analytics/log-drains':  [],
-  '/api/cli-release-version':                             { version: '2.67.1' },
-  '/api/platform/projects/default/billing/addons': {
-    ref: 'default', selected_addons: [], available_addons: [],
+  '/api/platform/config': {
+    is_platform: true,
+    ai_assistant_enabled: false,
   },
+  '/api/platform/notifications': [],
+  '/api/cli-release-version':    { version: '2.67.1' },
 };
 
-// ─── Dynamic inference ────────────────────────────────────────────────────────
-const ARRAY_SUFFIXES = [
-  'folders','databases','functions','notifications','keys','log-drains',
-  'addons','buckets','objects','policies','triggers','extensions',
-  'publications','roles','schemas','tables','views','types','migrations',
-  'hooks','snippets','secrets','members','invites','backups',
-];
+// ─── Dynamic Mock Generator ───────────────────────────────────────────────────
+function getMockResponse(pathname) {
+  // 1. Check exact static matches first (Strip query params handled by url.parse)
+  if (STATIC[pathname]) return STATIC[pathname];
 
-function inferResponse(pathname) {
-  const last = pathname.split('/').filter(Boolean).pop() || '';
-  return ARRAY_SUFFIXES.some(s => last === s || last.endsWith('s')) ? [] : {};
+  // 2. Handle Project-Specific paths (/api/v1/projects/[REF]/...)
+  const v1Match = pathname.match(RE_V1_PROJECT);
+  if (v1Match) {
+    const ref = v1Match[1];
+    const subpath = pathname.replace(RE_V1_PROJECT, '');
+
+    if (subpath === '' || subpath === '/') {
+      return { id: 1, ref: ref, name: env.projectName, organization_id: 1, status: 'ACTIVE_HEALTHY' };
+    }
+    if (subpath.includes('api-keys')) {
+      return [
+        { name: 'anon key',         api_key: env.anonKey,    tags: 'anon',         prefix: env.anonKey.slice(0, 10) },
+        { name: 'service_role key', api_key: env.serviceKey, tags: 'service_role', prefix: env.serviceKey.slice(0, 10) },
+      ];
+    }
+    // Default fallback for any project sub-tab
+    return subpath.endsWith('s') || subpath.includes('log') ? [] : {};
+  }
+
+  // 3. Fallback for any other platform call
+  return pathname.endsWith('s') ? [] : {};
 }
 
-function isPlatformRoute(pathname) {
-  return pathname.startsWith('/api/platform/') ||
-         pathname.startsWith('/api/v1/projects/');
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Proxy Logic ──────────────────────────────────────────────────────────────
 function sendJSON(res, status, data) {
   const body = JSON.stringify(data);
   res.writeHead(status, {
@@ -124,53 +129,35 @@ function proxyToStudio(req, res) {
   req.pipe(proxy, { end: true });
 }
 
-// ─── Server ───────────────────────────────────────────────────────────────────
+// ─── Main Server ──────────────────────────────────────────────────────────────
 const server = http.createServer((req, res) => {
-  const pathname = url.parse(req.url).pathname;
+  const parsedUrl = url.parse(req.url);
+  const pathname  = parsedUrl.pathname;
 
-  // Health check
-  if (pathname === '/health') {
-    return sendJSON(res, 200, { status: 'ok', upstream: `${STUDIO_HOST}:${STUDIO_PORT}` });
-  }
+  // Health / Favicon
+  if (pathname === '/health')     return sendJSON(res, 200, { status: 'ok' });
+  if (pathname === '/favicon.ico') return res.writeHead(204).end();
 
-  // Favicon
-  if (pathname === '/favicon.ico') {
-    res.writeHead(204);
-    return res.end();
-  }
+  // INTERCEPTION LOGIC
+  const isPlatform = RE_PLATFORM.test(pathname);
+  const isV1Project = RE_V1_PROJECT.test(pathname);
 
-  // Static mock — exact match
-  if (STATIC[pathname] !== undefined) {
-    console.log(`[mock:static]  ${req.method} ${pathname}`);
-    return sendJSON(res, 200, STATIC[pathname]);
-  }
-
-  // Dynamic mock — platform routes not in static map
-  if (isPlatformRoute(pathname)) {
-    const mock = inferResponse(pathname);
-    console.log(`[mock:dynamic] ${req.method} ${pathname} → ${Array.isArray(mock) ? '[]' : '{}'}`);
+  if (isPlatform || isV1Project) {
+    const mock = getMockResponse(pathname);
+    console.log(`[mock] Intercepted: ${req.method} ${pathname} -> 200 OK`);
     return sendJSON(res, 200, mock);
   }
 
-  // Passthrough → real Studio
+  // PASSTHROUGH LOGIC
   proxyToStudio(req, res);
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n[sidecar] Supabase Platform API Proxy started`);
-  console.log(`[sidecar] Listening  → :${PORT}`);
-  console.log(`[sidecar] Upstream   → ${STUDIO_HOST}:${STUDIO_PORT}`);
-  console.log(`[sidecar] Org        → ${env.orgName}`);
-  console.log(`[sidecar] Project    → ${env.projectName}\n`);
+  console.log(`\n🚀 Sidecar Proxy (v3.2.7) listening on :${PORT}`);
+  console.log(`📡 Targeting Studio  -> ${STUDIO_HOST}:${STUDIO_PORT}`);
+  console.log(`🌐 Org Name         -> ${env.orgName}\n`);
 });
 
-server.on('error', (err) => {
-  console.error(`[sidecar] Fatal server error: ${err.message}`);
-  process.exit(1);
-});
-
-// Graceful shutdown
 process.on('SIGTERM', () => {
-  console.log('[sidecar] SIGTERM received, shutting down...');
   server.close(() => process.exit(0));
 });
